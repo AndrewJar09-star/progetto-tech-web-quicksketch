@@ -1,0 +1,40 @@
+ REQUISITI GENERALI 
+Il progetto consiste nella progettazione e implementazione full-stack di un’applicazione web 
+moderna e sicura. L’applicazione consisterà di un back-end, che espone un’API (per esempio, REST), 
+e in un front-end, inteso come Single Page Application. Il front-end dovrà essere responsive, e 
+adattarsi dinamicamente a dispositivi con viewport di dimensioni diverse.  
+È richiesta inoltre la realizzazione di almeno dieci test End-to-End automatici. 
+Back-end e Front-end devono essere realizzati utilizzando framework web. Non è consentito 
+l’utilizzo di CMS (e.g.: Wordpress, Strapi, etc…). Quanto alle tecnologie da utilizzare, gli studenti 
+hanno piena libertà di scelta. Oltre alle tecnologie e ai framework presentati durante il corso, è 
+possibile (e incoraggiato) l’utilizzo di qualsiasi altro linguaggio di programmazione / framework / 
+libreria o strumento allo stato dell’arte.  
+Suggerimenti aggiuntivi. Per integrare contenuti dinamici provenienti da enciclopedie online, un 
+riferimento utile è la MediaWiki API. Per selezionare una voce casuale si può usare, ad esempio, la 
+action query + list=random. Tra i parametri più interessanti si segnalano rnnamespace (per limitare 
+il namespace, ad esempio alle sole voci enciclopediche), rnfilterredir (per escludere i redirect), 
+rnminsize e rnmaxsize (per filtrare pagine troppo brevi o troppo lunghe). Per quanto riguarda invece 
+la realizzazione di una semplice area di disegno, un buon punto di partenza potrebbe essere 
+Signature Pad, una libreria leggera basata su HTML5 canvas, compatibile con browser desktop e 
+mobile e priva di dipendenze esterne. In alternativa, si può considerare Fabric.js, che supporta anche 
+una modalità di free drawing. I suggerimenti qui riportati sono da intendersi come punti di partenza: 
+gli studenti sono invitati a valutare diverse alternative per implementare i requisiti dati e sono liberi 
+di utilizzare qualsiasi tecnologia, libreria o strumento ritengano opportuno.
+
+Traccia:
+Si vuole realizzare QUICKSKETCH, una piattaforma web ispirata al celebre gioco da tavolo Pictionary, 
+in cui gli utenti registrati possono creare nuovi sketch scegliendo una parola da un insieme 
+predefinito e rappresentandola attraverso un disegno realizzato su una canvas integrata. La fase di 
+disegno avviene con un tempo limitato, così da rendere l’esperienza più dinamica e spontanea. Il 
+sistema dovrà registrare autore, parola scelta, disegno e data di creazione dello sketch. Ogni sketch 
+pubblicato diventa un contenuto visibile agli altri utenti della piattaforma, che potranno provare a 
+indovinare la parola associata inserendo fino a 10 tentativi testuali. Se la parola non viene indovinata 
+in 10 tentativi, l’utente “perde”, visualizza la soluzione corretta, e non potrà più provare ad 
+indovinare quello sketch. 
+Tutti gli utenti, anche quelli non registrati, potranno esplorare la raccolta degli sketch. Gli utenti 
+autenticati, invece, potranno partecipare attivamente provando a indovinare i disegni pubblicati 
+dagli altri, o creando dei disegni a loro volta. La piattaforma dovrà inoltre mostrare una classifica dei 
+migliori disegnatori, basata sulla percentuale di sketch indovinati correttamente dagli utenti, e una 
+classifica dei migliori giocatori, calcolata in base al numero di parole indovinate. Ogni utente, inoltre, 
+potrà visualizzare le proprie statistiche dettagliate (e.g.: numero di disegni prodotti, numero di 
+parole indovinate, numero di tentativi utilizzati per indovinare, numero di parole non indovinate).

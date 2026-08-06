@@ -1,0 +1,20 @@
+{
+  "name": "quicksketch-frontend",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "signature_pad": "^5.0.0"
+  },
+  "devDependencies": {
+    "vite": "^6.3.0"
+  },
+  "allowScripts": {
+    "esbuild@0.25.12": true
+  }
+}
