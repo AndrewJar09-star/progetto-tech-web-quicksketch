@@ -890,12 +890,14 @@ body::after {
 
 .heart-life {
   font-size: 1.4rem;
+  color: var(--red);
   transition: all 0.3s ease;
   position: relative;
   display: inline-block;
 }
 
 .heart-life.used {
+  color: var(--ink-faint);
   opacity: 0.3;
   filter: grayscale(1);
 }

@@ -182,16 +182,17 @@ function GuessPanel({ sketch, onUpdate, showToast }) {
 
       if (result.is_correct) {
         showToast('🎉 Bravo! Hai indovinato!', 'success');
-        onUpdate();
+        await onUpdate();
       } else if (result.attempts_remaining <= 0) {
         showToast('😞 Tentativi esauriti!', 'error');
-        onUpdate();
+        await onUpdate();
       } else {
         setMessage({
           text: g,
           remaining: result.attempts_remaining
         });
         await loadHistory();
+        await onUpdate();
         setGuess('');
         setLoading(false);
       }
