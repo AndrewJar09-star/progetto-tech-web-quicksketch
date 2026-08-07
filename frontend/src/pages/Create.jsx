@@ -5,7 +5,7 @@ import { getRandomWords, createSketch } from '../api.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useToast } from '../components/Toast.jsx';
 
-const COLORS = [
+const PRESET_COLORS = [
   { name: 'Nero', hex: '#000000' },
   { name: 'Rosso', hex: '#ef4444' },
   { name: 'Blu', hex: '#3b82f6' },
@@ -32,10 +32,16 @@ export default function Create() {
 
   const [phase, setPhase] = useState('word-select');
   const [selectedWord, setSelectedWord] = useState(null);
+  const selectedWordRef = useRef(null);
+
   const [words, setWords] = useState([]);
   const [wordsLoading, setWordsLoading] = useState(true);
   const [timeLeft, setTimeLeft] = useState(TIME_LIMIT);
-  const [activeColor, setActiveColor] = useState(0);
+
+  // Drawing Tools State
+  const [activeColor, setActiveColor] = useState('#000000');
+  const [customColor, setCustomColor] = useState('#ff0055');
+  const [isEraser, setIsEraser] = useState(false);
   const [activeSize, setActiveSize] = useState(1);
 
   const canvasRef = useRef(null);
@@ -67,6 +73,7 @@ export default function Create() {
       const { words: w } = await getRandomWords(5);
       setWords(w);
       setSelectedWord(null);
+      selectedWordRef.current = null;
     } catch {
       setWords([]);
     } finally {
@@ -74,7 +81,13 @@ export default function Create() {
     }
   }
 
+  const handleSelectWord = (word) => {
+    setSelectedWord(word);
+    selectedWordRef.current = word;
+  };
+
   const startDrawing = useCallback(() => {
+    if (!selectedWordRef.current) return;
     setPhase('drawing');
     submittedRef.current = false;
 
@@ -101,8 +114,10 @@ export default function Create() {
         padRef.current.off();
       }
 
+      const initialColor = isEraser ? '#ffffff' : activeColor;
+
       padRef.current = new SignaturePad(canvas, {
-        penColor: COLORS[activeColor]?.hex || '#000000',
+        penColor: initialColor,
         minWidth: SIZES[activeSize]?.value * 0.5 || 2,
         maxWidth: SIZES[activeSize]?.value || 4,
         backgroundColor: '#ffffff'
@@ -128,13 +143,19 @@ export default function Create() {
         });
       }, 1000);
     }, 50);
-  }, [activeColor, activeSize, showToast]);
+  }, [activeColor, activeSize, isEraser, showToast]);
 
   const submitSketch = useCallback(async () => {
     if (submittedRef.current) return;
 
     if (!padRef.current || padRef.current.isEmpty()) {
       showToast('Disegna qualcosa prima di pubblicare! 🎨', 'error');
+      return;
+    }
+
+    const wordToPublish = selectedWordRef.current || selectedWord;
+    if (!wordToPublish) {
+      showToast('Errore: nessuna parola selezionata', 'error');
       return;
     }
 
@@ -156,7 +177,7 @@ export default function Create() {
       exportCtx.drawImage(canvas, 0, 0, 700, 500);
 
       const imageData = exportCanvas.toDataURL('image/png');
-      await createSketch(selectedWord, imageData, TIME_LIMIT);
+      await createSketch(wordToPublish, imageData, TIME_LIMIT);
       showToast('Sketch pubblicato con successo! 🎉', 'success');
       navigate('/home');
     } catch (err) {
@@ -171,9 +192,29 @@ export default function Create() {
     return () => { delete window.__qs_submit; };
   }, [submitSketch]);
 
-  const handleColorClick = (idx) => {
-    setActiveColor(idx);
-    if (padRef.current) padRef.current.penColor = COLORS[idx].hex;
+  const handleColorClick = (hex) => {
+    setIsEraser(false);
+    setActiveColor(hex);
+    if (padRef.current) {
+      padRef.current.penColor = hex;
+    }
+  };
+
+  const handleCustomColorChange = (e) => {
+    const hex = e.target.value;
+    setCustomColor(hex);
+    setIsEraser(false);
+    setActiveColor(hex);
+    if (padRef.current) {
+      padRef.current.penColor = hex;
+    }
+  };
+
+  const handleEraserClick = () => {
+    setIsEraser(true);
+    if (padRef.current) {
+      padRef.current.penColor = '#ffffff';
+    }
   };
 
   const handleSizeClick = (idx) => {
@@ -226,7 +267,7 @@ export default function Create() {
                   key={i}
                   className={`word-option${selectedWord === w ? ' selected' : ''}`}
                   data-word={w}
-                  onClick={() => setSelectedWord(w)}
+                  onClick={() => handleSelectWord(w)}
                 >
                   {w}
                 </button>
@@ -284,20 +325,51 @@ export default function Create() {
           <div className="canvas-wrapper">
             <canvas id="draw-canvas" ref={canvasRef} width="700" height="500"></canvas>
             <div className="canvas-toolbar">
+              {/* Presets & Custom Color Picker */}
               <div style={{ display: 'flex', gap: '0.35rem', alignItems: 'center' }}>
-                {COLORS.map((c, i) => (
+                {PRESET_COLORS.map((c, i) => (
                   <button
                     key={i}
-                    className={`color-btn${activeColor === i ? ' active' : ''}`}
+                    className={`color-btn${!isEraser && activeColor === c.hex ? ' active' : ''}`}
                     style={{ background: c.hex }}
                     data-color={c.hex}
                     title={c.name}
                     aria-label={`Colore ${c.name}`}
-                    onClick={() => handleColorClick(i)}
+                    onClick={() => handleColorClick(c.hex)}
                   />
                 ))}
+
+                {/* Custom Color Picker Swatch */}
+                <div
+                  className={`color-picker-btn${!isEraser && !PRESET_COLORS.some(p => p.hex === activeColor) ? ' active' : ''}`}
+                  title="Scegli colore personalizzato"
+                  style={!PRESET_COLORS.some(p => p.hex === activeColor) ? { background: activeColor } : {}}
+                >
+                  <span style={{ fontSize: '0.75rem', pointerEvents: 'none' }}>🎨</span>
+                  <input
+                    type="color"
+                    className="color-picker-input"
+                    value={customColor}
+                    onChange={handleCustomColorChange}
+                    title="Tavolozza colori personalizzati"
+                  />
+                </div>
               </div>
+
               <div style={{ width: '1px', height: '24px', background: 'var(--ink-faint)', margin: '0 0.25rem' }}></div>
+
+              {/* Eraser Tool */}
+              <button
+                className={`tool-btn eraser-btn${isEraser ? ' active' : ''}`}
+                onClick={handleEraserClick}
+                title="Gomma da cancellare (cancella solo il tratto su cui passi)"
+              >
+                🧹 Gomma
+              </button>
+
+              <div style={{ width: '1px', height: '24px', background: 'var(--ink-faint)', margin: '0 0.25rem' }}></div>
+
+              {/* Stroke Sizes */}
               <div style={{ display: 'flex', gap: '0.35rem' }}>
                 {SIZES.map((s, i) => (
                   <button
@@ -310,6 +382,8 @@ export default function Create() {
                   </button>
                 ))}
               </div>
+
+              {/* Actions */}
               <div style={{ marginLeft: 'auto', display: 'flex', gap: '0.35rem' }}>
                 <button className="btn btn-sm btn-secondary" id="btn-undo" onClick={handleUndo}>
                   ↩ Annulla

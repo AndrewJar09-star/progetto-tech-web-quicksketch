@@ -39,6 +39,8 @@ export async function renderCreate(container) {
   let timer = null;
   let timeLeft = TIME_LIMIT;
   let signaturePad = null;
+  let isEraser = false;
+  let activeColor = '#000000';
 
   container.innerHTML = `
     <div class="create-layout">
@@ -89,7 +91,13 @@ export async function renderCreate(container) {
                 <button class="color-btn ${i === 0 ? 'active' : ''}" style="background:${c.hex}" 
                   data-color="${c.hex}" title="${c.name}" aria-label="Colore ${c.name}"></button>
               `).join('')}
+              <div class="color-picker-btn" title="Scegli colore personalizzato">
+                <span style="font-size:0.75rem;pointer-events:none">🎨</span>
+                <input type="color" class="color-picker-input" id="custom-color-input" value="#ff0055" />
+              </div>
             </div>
+            <div style="width:1px;height:24px;background:var(--border-subtle);margin:0 0.25rem"></div>
+            <button class="tool-btn eraser-btn" id="btn-eraser">🧹 Gomma</button>
             <div style="width:1px;height:24px;background:var(--border-subtle);margin:0 0.25rem"></div>
             <div style="display:flex;gap:0.35rem">
               ${SIZES.map((s, i) => `
@@ -158,22 +166,8 @@ export async function renderCreate(container) {
 
     // Init canvas
     const canvas = document.getElementById('draw-canvas');
-    
-    // Responsive canvas
     const wrapper = canvas.parentElement;
-    const wrapperWidth = wrapper.clientWidth;
-    const ratio = Math.min(wrapperWidth / 700, 1);
-    canvas.style.width = '100%';
-    canvas.style.height = `${500 * ratio}px`;
 
-    signaturePad = new SignaturePad(canvas, {
-      penColor: '#000000',
-      minWidth: 2,
-      maxWidth: 4,
-      backgroundColor: 'rgb(255, 255, 255)'
-    });
-
-    // Resize handling
     function resizeCanvas() {
       const w = wrapper.clientWidth;
       const displayRatio = window.devicePixelRatio || 1;
@@ -182,22 +176,55 @@ export async function renderCreate(container) {
       canvas.style.width = w + 'px';
       canvas.style.height = (500 * (w / 700)) + 'px';
       const ctx = canvas.getContext('2d');
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
       ctx.scale(displayRatio, displayRatio);
+
+      if (signaturePad) signaturePad.off();
+
+      signaturePad = new SignaturePad(canvas, {
+        penColor: isEraser ? '#ffffff' : activeColor,
+        minWidth: 2,
+        maxWidth: 4,
+        backgroundColor: '#ffffff'
+      });
       signaturePad.clear();
-      // Fill white background
-      ctx.fillStyle = 'white';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
     }
     resizeCanvas();
 
     // Color buttons
     container.querySelectorAll('.color-btn').forEach(btn => {
       btn.addEventListener('click', () => {
+        isEraser = false;
+        document.getElementById('btn-eraser').classList.remove('active');
         container.querySelectorAll('.color-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
-        signaturePad.penColor = btn.dataset.color;
+        activeColor = btn.dataset.color;
+        signaturePad.penColor = activeColor;
       });
     });
+
+    // Custom Color Input
+    const customColorInput = document.getElementById('custom-color-input');
+    if (customColorInput) {
+      customColorInput.addEventListener('input', (e) => {
+        isEraser = false;
+        document.getElementById('btn-eraser').classList.remove('active');
+        container.querySelectorAll('.color-btn').forEach(b => b.classList.remove('active'));
+        activeColor = e.target.value;
+        signaturePad.penColor = activeColor;
+      });
+    }
+
+    // Eraser
+    const eraserBtn = document.getElementById('btn-eraser');
+    if (eraserBtn) {
+      eraserBtn.addEventListener('click', () => {
+        isEraser = true;
+        eraserBtn.classList.add('active');
+        container.querySelectorAll('.color-btn').forEach(b => b.classList.remove('active'));
+        signaturePad.penColor = '#ffffff';
+      });
+    }
 
     // Size buttons
     container.querySelectorAll('.size-btn').forEach(btn => {
@@ -222,9 +249,6 @@ export async function renderCreate(container) {
     // Clear
     document.getElementById('btn-clear').addEventListener('click', () => {
       signaturePad.clear();
-      const ctx = canvas.getContext('2d');
-      ctx.fillStyle = 'white';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
     });
 
     // Submit
@@ -236,7 +260,7 @@ export async function renderCreate(container) {
 
   function startTimer() {
     timeLeft = TIME_LIMIT;
-    const circumference = 2 * Math.PI * 36; // r=36
+    const circumference = 2 * Math.PI * 36;
     const progress = document.getElementById('timer-progress');
     const text = document.getElementById('timer-text');
 
@@ -244,11 +268,9 @@ export async function renderCreate(container) {
       timeLeft--;
       text.textContent = timeLeft;
 
-      // Aggiorna cerchio
       const offset = circumference * (1 - timeLeft / TIME_LIMIT);
       progress.style.strokeDashoffset = offset;
 
-      // Colori di avviso
       progress.classList.remove('warning', 'danger');
       if (timeLeft <= 10) {
         progress.classList.add('danger');
@@ -258,13 +280,24 @@ export async function renderCreate(container) {
 
       if (timeLeft <= 0) {
         clearInterval(timer);
-        submitSketch();
+        if (signaturePad && !signaturePad.isEmpty()) {
+          submitSketch();
+        } else {
+          showToast('Tempo scaduto! Disegna qualcosa prima di pubblicare.', 'error');
+          navigate('home');
+        }
       }
     }, 1000);
   }
 
   async function submitSketch() {
     if (phase === 'submitted') return;
+
+    if (!signaturePad || signaturePad.isEmpty()) {
+      showToast('Disegna qualcosa prima di pubblicare! 🎨', 'error');
+      return;
+    }
+
     phase = 'submitted';
 
     if (timer) clearInterval(timer);
@@ -277,7 +310,16 @@ export async function renderCreate(container) {
 
     try {
       const canvas = document.getElementById('draw-canvas');
-      const imageData = canvas.toDataURL('image/png');
+
+      const exportCanvas = document.createElement('canvas');
+      exportCanvas.width = 700;
+      exportCanvas.height = 500;
+      const exportCtx = exportCanvas.getContext('2d');
+      exportCtx.fillStyle = '#ffffff';
+      exportCtx.fillRect(0, 0, 700, 500);
+      exportCtx.drawImage(canvas, 0, 0, 700, 500);
+
+      const imageData = exportCanvas.toDataURL('image/png');
 
       await createSketch(selectedWord, imageData, TIME_LIMIT);
       showToast('Sketch pubblicato con successo! 🎉', 'success');
