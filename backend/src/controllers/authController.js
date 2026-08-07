@@ -54,7 +54,7 @@ export async function register(req, res) {
 
     res.status(201).json({
       message: 'Registrazione completata con successo',
-      user: { id: user.id, username: user.username, email: user.email },
+      user: { id: user.id, username: user.username, email: user.email, avatar_url: null },
       accessToken,
       refreshToken
     });
@@ -89,14 +89,14 @@ export async function login(req, res) {
       return res.status(401).json({ error: 'Credenziali non valide' });
     }
 
-    const userPayload = { id: user.id, username: user.username, email: user.email };
+    const userPayload = { id: user.id, username: user.username, email: user.email, avatar_url: user.avatar_url };
 
     const accessToken = authService.generateAccessToken(userPayload);
     const refreshToken = authService.generateRefreshToken(userPayload);
 
     res.json({
       message: 'Login effettuato con successo',
-      user: { id: user.id, username: user.username, email: user.email },
+      user: { id: user.id, username: user.username, email: user.email, avatar_url: user.avatar_url },
       accessToken,
       refreshToken
     });
@@ -154,6 +154,24 @@ export function me(req, res) {
     res.json({ user });
   } catch (err) {
     console.error('Errore profilo:', err);
+    res.status(500).json({ error: 'Errore interno del server' });
+  }
+}
+
+/**
+ * PUT /api/auth/avatar
+ */
+export function updateAvatar(req, res) {
+  try {
+    const { avatarUrl } = req.body;
+    User.updateAvatar(req.user.id, avatarUrl || null);
+    const updatedUser = User.findById(req.user.id);
+    res.json({
+      message: 'Avatar aggiornato con successo',
+      user: updatedUser
+    });
+  } catch (err) {
+    console.error('Errore aggiornamento avatar:', err);
     res.status(500).json({ error: 'Errore interno del server' });
   }
 }

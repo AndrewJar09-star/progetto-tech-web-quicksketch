@@ -9,5 +9,6 @@ router.get('/:id', optionalAuth, sketchController.detail);
 router.post('/', authenticate, sketchController.create);
 router.post('/:id/guess', authenticate, sketchController.guess);
 router.get('/:id/guesses', authenticate, sketchController.guessHistory);
+router.delete('/:id', authenticate, sketchController.remove);
 
 export default router;

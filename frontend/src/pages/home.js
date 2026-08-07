@@ -1,7 +1,8 @@
 /**
  * Pagina Home — Galleria degli sketch + Hero section.
  */
-import { getSketches, isLoggedIn } from '../api.js';
+import { getSketches, deleteSketch, isLoggedIn } from '../api.js';
+import { showToast } from '../toast.js';
 
 export async function renderHome(container) {
   const loggedIn = isLoggedIn();
@@ -58,9 +59,27 @@ async function loadSketches(page) {
 
     // Aggiungi event listeners alle card
     grid.querySelectorAll('.card-sketch').forEach(card => {
-      card.addEventListener('click', () => {
+      card.addEventListener('click', (e) => {
+        if (e.target.closest('.btn-delete-sketch')) return;
         const id = card.dataset.id;
         location.hash = `#/sketch/${id}`;
+      });
+    });
+
+    // Delete buttons
+    grid.querySelectorAll('.btn-delete-sketch').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const id = btn.dataset.id;
+        if (window.confirm('Sei sicuro di voler eliminare questo sketch?')) {
+          try {
+            await deleteSketch(id);
+            showToast('Sketch eliminato con successo! 🗑️', 'success');
+            loadSketches(page);
+          } catch (err) {
+            showToast(err.error || 'Errore nell\'eliminazione dello sketch', 'error');
+          }
+        }
       });
     });
 
@@ -106,7 +125,10 @@ function renderSketchCard(sketch) {
     <article class="card card-sketch" data-id="${sketch.id}" tabindex="0" role="button" aria-label="Sketch di ${sketch.author_username}">
       <img class="sketch-image" src="${sketch.image_data}" alt="Sketch di ${sketch.author_username}" loading="lazy" />
       <div class="sketch-info">
-        <div class="sketch-author">di <strong>${sketch.author_username}</strong> · ${date}</div>
+        <div class="sketch-author" style="display:flex;justify-content:space-between;align-items:center">
+          <span>di <strong>${sketch.author_username}</strong> · ${date}</span>
+          ${sketch.is_own ? `<button class="btn-delete-sketch" data-id="${sketch.id}" title="Elimina sketch">🗑️</button>` : ''}
+        </div>
         <div class="sketch-meta">
           <span class="text-muted" style="font-size:0.75rem">👥 ${sketch.total_players} giocatori · ✅ ${sketch.times_guessed} indovinato</span>
           ${badge}

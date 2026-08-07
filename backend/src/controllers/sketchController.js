@@ -225,3 +225,27 @@ export function guessHistory(req, res) {
     res.status(500).json({ error: 'Errore interno del server' });
   }
 }
+
+/**
+ * DELETE /api/sketches/:id
+ */
+export function remove(req, res) {
+  try {
+    const sketchId = parseInt(req.params.id);
+    const sketch = Sketch.findByIdSimple(sketchId);
+
+    if (!sketch) {
+      return res.status(404).json({ error: 'Sketch non trovato' });
+    }
+
+    if (sketch.author_id !== req.user.id) {
+      return res.status(403).json({ error: 'Puoi eliminare solo i tuoi sketch' });
+    }
+
+    Sketch.deleteById(sketchId, req.user.id);
+    res.json({ message: 'Sketch eliminato con successo' });
+  } catch (err) {
+    console.error('Errore eliminazione sketch:', err);
+    res.status(500).json({ error: 'Errore interno del server' });
+  }
+}

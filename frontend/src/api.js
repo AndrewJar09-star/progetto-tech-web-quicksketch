@@ -141,6 +141,23 @@ export async function createSketch(word, imageData, timeLimit = 60) {
   });
 }
 
+export async function deleteSketch(id) {
+  return apiFetch(`/sketches/${id}`, {
+    method: 'DELETE'
+  });
+}
+
+export async function updateAvatar(avatarUrl) {
+  const data = await apiFetch('/auth/avatar', {
+    method: 'PUT',
+    body: JSON.stringify({ avatarUrl })
+  });
+  if (data.user) {
+    localStorage.setItem('qs_user', JSON.stringify(data.user));
+  }
+  return data;
+}
+
 export async function submitGuess(sketchId, guess) {
   return apiFetch(`/sketches/${sketchId}/guess`, {
     method: 'POST',

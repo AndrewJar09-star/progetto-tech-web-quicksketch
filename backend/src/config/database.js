@@ -36,9 +36,16 @@ export async function initDatabase() {
       username TEXT UNIQUE NOT NULL,
       email TEXT UNIQUE NOT NULL,
       password_hash TEXT NOT NULL,
+      avatar_url TEXT,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )
   `);
+
+  try {
+    db.run('ALTER TABLE users ADD COLUMN avatar_url TEXT');
+  } catch (e) {
+    // Colonna già esistente
+  }
 
   db.run(`
     CREATE TABLE IF NOT EXISTS sketches (

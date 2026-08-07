@@ -14,13 +14,20 @@ export function findByUsernameOrEmail(username, email) {
   );
 }
 
-/**
- * Cerca un utente per ID.
- */
 export function findById(id) {
   return queryOne(
-    'SELECT id, username, email, created_at FROM users WHERE id = ?',
+    'SELECT id, username, email, avatar_url, created_at FROM users WHERE id = ?',
     [id]
+  );
+}
+
+/**
+ * Aggiorna l'avatar dell'utente.
+ */
+export function updateAvatar(id, avatarUrl) {
+  return runQuery(
+    'UPDATE users SET avatar_url = ? WHERE id = ?',
+    [avatarUrl, id]
   );
 }
 

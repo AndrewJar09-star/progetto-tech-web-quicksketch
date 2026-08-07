@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { getSketches } from '../api.js';
+import { getSketches, deleteSketch } from '../api.js';
 import { useAuth } from '../context/AuthContext.jsx';
+import { useToast } from '../components/Toast.jsx';
 
 export default function Home() {
   const { loggedIn } = useAuth();
+  const { showToast } = useToast();
   const [sketches, setSketches] = useState([]);
   const [pagination, setPagination] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -26,6 +28,17 @@ export default function Home() {
       setError(err.error || 'Impossibile caricare gli sketch.');
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handleDelete(sketchId) {
+    if (!window.confirm('Sei sicuro di voler eliminare questo sketch?')) return;
+    try {
+      await deleteSketch(sketchId);
+      showToast('Sketch eliminato con successo! 🗑️', 'success');
+      setSketches(prev => prev.filter(s => s.id !== sketchId));
+    } catch (err) {
+      showToast(err.error || 'Errore nell\'eliminazione dello sketch', 'error');
     }
   }
 
@@ -65,7 +78,7 @@ export default function Home() {
             </div>
           ) : (
             sketches.map(sketch => (
-              <SketchCard key={sketch.id} sketch={sketch} />
+              <SketchCard key={sketch.id} sketch={sketch} onDelete={handleDelete} />
             ))
           )}
         </div>
@@ -94,7 +107,7 @@ export default function Home() {
   );
 }
 
-function SketchCard({ sketch }) {
+function SketchCard({ sketch, onDelete }) {
   const date = new Date(sketch.created_at).toLocaleDateString('it-IT', {
     day: 'numeric', month: 'short'
   });
@@ -126,8 +139,20 @@ function SketchCard({ sketch }) {
         loading="lazy"
       />
       <div className="sketch-info">
-        <div className="sketch-author">
-          di <strong>{sketch.author_username}</strong> · {date}
+        <div className="sketch-author" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span>di <strong>{sketch.author_username}</strong> · {date}</span>
+          {sketch.is_own && (
+            <button
+              className="btn-delete-sketch"
+              title="Elimina il tuo sketch"
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete(sketch.id);
+              }}
+            >
+              🗑️
+            </button>
+          )}
         </div>
         <div className="sketch-meta">
           <span className="text-muted" style={{ fontSize: '0.75rem' }}>

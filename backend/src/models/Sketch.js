@@ -65,3 +65,13 @@ export function create(authorId, word, imageData, timeLimit = 60) {
     [authorId, word, imageData, timeLimit]
   );
 }
+
+/**
+ * Elimina uno sketch per ID (solo se l'autore coincide).
+ */
+export function deleteById(id, authorId) {
+  return runQuery(
+    'DELETE FROM sketches WHERE id = ? AND author_id = ?',
+    [id, authorId]
+  );
+}

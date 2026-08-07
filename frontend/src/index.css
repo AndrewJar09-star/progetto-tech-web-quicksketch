@@ -510,6 +510,26 @@ body::after {
   font-weight: 800;
 }
 
+.btn-delete-sketch {
+  background: var(--red);
+  color: white;
+  border: 1.5px solid var(--ink);
+  padding: 0.15rem 0.45rem;
+  font-size: 0.75rem;
+  font-weight: 800;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  box-shadow: 1.5px 1.5px 0 var(--ink);
+  transition: var(--transition-fast);
+  line-height: 1;
+}
+
+.btn-delete-sketch:hover {
+  background: #ff2222;
+  transform: scale(1.1);
+  box-shadow: 2px 2px 0 var(--ink);
+}
+
 .card-sketch .sketch-meta {
   display: flex;
   align-items: center;

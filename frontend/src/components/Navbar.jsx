@@ -70,8 +70,16 @@ export default function Navbar() {
           <div className="navbar-user">
             {loggedIn ? (
               <>
-                <div className="navbar-avatar">
-                  {user?.username?.charAt(0).toUpperCase()}
+                <div className="navbar-avatar" style={{ overflow: 'hidden' }}>
+                  {user?.avatar_url ? (
+                    <img
+                      src={user.avatar_url}
+                      alt="Avatar"
+                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    />
+                  ) : (
+                    user?.username?.charAt(0).toUpperCase()
+                  )}
                 </div>
                 <Link className="navbar-username" to="/profile">
                   {user?.username}
