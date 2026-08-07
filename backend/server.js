@@ -2,14 +2,14 @@ import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import rateLimit from 'express-rate-limit';
-import { initDatabase } from './db/database.js';
+import { initDatabase } from './src/config/database.js';
 
 // Import routes
-import authRoutes from './routes/auth.js';
-import sketchesRoutes from './routes/sketches.js';
-import wordsRoutes from './routes/words.js';
-import leaderboardRoutes from './routes/leaderboard.js';
-import usersRoutes from './routes/users.js';
+import authRoutes from './src/routes/authRoutes.js';
+import sketchRoutes from './src/routes/sketchRoutes.js';
+import wordRoutes from './src/routes/wordRoutes.js';
+import leaderboardRoutes from './src/routes/leaderboardRoutes.js';
+import userRoutes from './src/routes/userRoutes.js';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -46,10 +46,10 @@ app.use('/api/auth/register', authLimiter);
 // ── Routes ─────────────────────────────────────────────────
 
 app.use('/api/auth', authRoutes);
-app.use('/api/sketches', sketchesRoutes);
-app.use('/api/words', wordsRoutes);
+app.use('/api/sketches', sketchRoutes);
+app.use('/api/words', wordRoutes);
 app.use('/api/leaderboard', leaderboardRoutes);
-app.use('/api/users', usersRoutes);
+app.use('/api/users', userRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {
