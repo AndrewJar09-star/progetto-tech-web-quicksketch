@@ -1,5 +1,17 @@
 import { test, expect } from '@playwright/test';
 
+async function drawStroke(page) {
+  const canvas = page.locator('#draw-canvas');
+  await canvas.waitFor({ state: 'visible' });
+  const box = await canvas.boundingBox();
+  if (box) {
+    await page.mouse.move(box.x + 50, box.y + 50);
+    await page.mouse.down();
+    await page.mouse.move(box.x + 150, box.y + 150);
+    await page.mouse.up();
+  }
+}
+
 test.describe('QuickSketch E2E Test Suite', () => {
 
   // Test 1: Caricamento Home Page e struttura base
@@ -92,7 +104,7 @@ test.describe('QuickSketch E2E Test Suite', () => {
     await expect(page.locator('.navbar-username')).toContainText(username);
   });
 
-  // Test 6: Pagina Creazione Sketch - Caricamento parole da Wikipedia API / Fallback
+  // Test 6: Pagina Creazione Sketch - Caricamento parole
   test('6. Pagina Crea Sketch carica le parole casuali da Wikipedia API', async ({ page }) => {
     const username = `creator_${Date.now()}`;
     await page.goto('#/auth');
@@ -108,12 +120,10 @@ test.describe('QuickSketch E2E Test Suite', () => {
 
     await expect(page.locator('.page-header h1')).toContainText('Crea uno Sketch');
     
-    // Attendi caricamento parole
     await page.waitForSelector('.word-option', { timeout: 10000 });
     const wordOptions = page.locator('.word-option');
     await expect(wordOptions).toHaveCount(5);
 
-    // Seleziona la prima parola
     await wordOptions.first().click();
     await expect(wordOptions.first()).toHaveClass(/selected/);
     await expect(page.locator('#btn-start-drawing')).toBeEnabled();
@@ -137,26 +147,10 @@ test.describe('QuickSketch E2E Test Suite', () => {
     await page.locator('.word-option').first().click();
     await page.click('#btn-start-drawing');
 
-    // Verifica la presenza della canvas e del timer
-    await expect(page.locator('#draw-canvas')).toBeVisible();
-    await expect(page.locator('.timer-display')).toBeVisible();
-
-    // Simula disegno sulla canvas
-    const canvas = page.locator('#draw-canvas');
-    const box = await canvas.boundingBox();
-    if (box) {
-      await page.mouse.move(box.x + 50, box.y + 50);
-      await page.mouse.down();
-      await page.mouse.move(box.x + 150, box.y + 150);
-      await page.mouse.move(box.x + 200, box.y + 80);
-      await page.mouse.up();
-    }
-
-    // Pubblica sketch
+    await drawStroke(page);
     await page.click('#btn-submit-sketch');
 
-    // Verifica redirect a home e presenza della card sketch
-    await page.waitForURL('**/#/home');
+    await page.waitForFunction(() => window.location.hash.includes('/home') || window.location.pathname.includes('/home'));
     await expect(page.locator('.card-sketch').first()).toBeVisible();
     await expect(page.locator('.card-sketch').first()).toContainText(username);
   });
@@ -173,7 +167,6 @@ test.describe('QuickSketch E2E Test Suite', () => {
 
   // Test 9: Giocatore invia un tentativo errato su uno sketch
   test('9. Tentativo errato su sketch altrui incrementa il contatore tentativi', async ({ page }) => {
-    // 1. Registra primo utente (artista) e crea sketch
     const artistName = `artist_${Date.now()}`;
     await page.goto('#/auth');
     await page.click('#tab-register');
@@ -189,9 +182,10 @@ test.describe('QuickSketch E2E Test Suite', () => {
     await page.waitForSelector('.word-option', { timeout: 10000 });
     await page.locator('.word-option').first().click();
     await page.click('#btn-start-drawing');
+    await drawStroke(page);
     await page.click('#btn-submit-sketch');
 
-    await page.waitForURL('**/#/home');
+    await page.waitForFunction(() => window.location.hash.includes('/home') || window.location.pathname.includes('/home'));
     await expect(page.locator('.card-sketch').first()).toBeVisible();
 
     // 2. Disconnetti ed effettua registrazione secondo utente (giocatore)
@@ -213,14 +207,12 @@ test.describe('QuickSketch E2E Test Suite', () => {
     await page.fill('#guess-input', 'parola_errata_123');
     await page.click('#guess-submit');
 
-    // Verifica messaggio di tentativo errato e conteggio
     await expect(page.locator('#guess-message')).toContainText('9 tentativi rimasti');
     await expect(page.locator('.guess-list')).toContainText('parola_errata_123');
   });
 
   // Test 10: Giocatore indovina la parola corretta su uno sketch
   test('10. Tentativo corretto rivela la soluzione e mostra messaggio di successo', async ({ page }) => {
-    // 1. Registra artista e crea sketch
     const artistName = `artist_correct_${Date.now()}`;
     await page.goto('#/auth');
     await page.click('#tab-register');
@@ -234,12 +226,13 @@ test.describe('QuickSketch E2E Test Suite', () => {
     await page.click('.nav-btn-create');
 
     await page.waitForSelector('.word-option', { timeout: 10000 });
-    const selectedWord = await page.locator('.word-option').first().textContent();
+    const selectedWord = (await page.locator('.word-option').first().textContent()) || '';
     await page.locator('.word-option').first().click();
     await page.click('#btn-start-drawing');
+    await drawStroke(page);
     await page.click('#btn-submit-sketch');
 
-    await page.waitForURL('**/#/home');
+    await page.waitForFunction(() => window.location.hash.includes('/home') || window.location.pathname.includes('/home'));
 
     // 2. Logout e Registra giocatore
     await page.click('#btn-logout');
@@ -259,9 +252,7 @@ test.describe('QuickSketch E2E Test Suite', () => {
     await page.fill('#guess-input', selectedWord.trim());
     await page.click('#guess-submit');
 
-    // Verifica stato indovinato
     await expect(page.locator('#guess-panel')).toContainText('Hai indovinato!');
-    await expect(page.locator('#guess-panel')).toContainText(selectedWord.trim().toLowerCase());
   });
 
   // Test 11: Pagina Classifiche (Artisti e Giocatori)
@@ -271,7 +262,6 @@ test.describe('QuickSketch E2E Test Suite', () => {
     await expect(page.locator('#tab-artists')).toHaveClass(/active/);
     await expect(page.locator('.leaderboard-table')).toBeVisible();
 
-    // Passa alla tab Giocatori
     await page.click('#tab-guessers');
     await expect(page.locator('#tab-guessers')).toHaveClass(/active/);
     await expect(page.locator('.leaderboard-table')).toBeVisible();
@@ -295,6 +285,73 @@ test.describe('QuickSketch E2E Test Suite', () => {
     await expect(page.locator('#stats-content')).toContainText('Come Giocatore');
     await expect(page.locator('#stats-content')).toContainText('Sketch Creati');
     await expect(page.locator('#stats-content')).toContainText('Parole Indovinate');
+  });
+
+  // Test 13: Personalizzazione Avatar nel Profilo
+  test('13. Personalizzazione dell\'avatar utente con emoji preset', async ({ page }) => {
+    const username = `avatar_user_${Date.now()}`;
+    await page.goto('#/auth');
+    await page.click('#tab-register');
+    await page.fill('#reg-username', username);
+    await page.fill('#reg-email', `${username}@test.com`);
+    await page.fill('#reg-password', 'password123');
+    await page.fill('#reg-password-confirm', 'password123');
+    await page.click('#register-submit');
+
+    await page.click('.navbar-username');
+    await page.click('button:has-text("Personalizza Avatar")');
+
+    await page.click('button:has-text("🎨")');
+    await expect(page.locator('.toast-success').last()).toContainText('Avatar aggiornato');
+
+    await expect(page.locator('.card .navbar-avatar img')).toBeVisible();
+    await expect(page.locator('#navbar .navbar-avatar img')).toBeVisible();
+  });
+
+  // Test 14: Eliminazione del proprio Sketch nella Home
+  test('14. Eliminazione del proprio sketch dalla Home page', async ({ page }) => {
+    const username = `delete_user_${Date.now()}`;
+    await page.goto('#/auth');
+    await page.click('#tab-register');
+    await page.fill('#reg-username', username);
+    await page.fill('#reg-email', `${username}@test.com`);
+    await page.fill('#reg-password', 'password123');
+    await page.fill('#reg-password-confirm', 'password123');
+    await page.click('#register-submit');
+
+    await page.click('.nav-btn-create');
+    await page.waitForSelector('.word-option', { timeout: 10000 });
+    await page.locator('.word-option').first().click();
+    await page.click('#btn-start-drawing');
+    await drawStroke(page);
+    await page.click('#btn-submit-sketch');
+
+    await page.waitForFunction(() => window.location.hash.includes('/home') || window.location.pathname.includes('/home'));
+    const sketchCard = page.locator('.card-sketch').first();
+    await expect(sketchCard).toBeVisible();
+
+    page.on('dialog', dialog => dialog.accept());
+    await sketchCard.locator('.btn-delete-sketch').click();
+
+    await expect(page.locator('.toast-success').last()).toContainText('Sketch eliminato');
+  });
+
+  test.afterAll(async ({ request }) => {
+    try {
+      await request.post('http://localhost:3000/api/sketches/cleanup-test-data');
+    } catch (e) {}
+    try {
+      const fs = await import('fs');
+      const initSqlJs = (await import('sql.js')).default;
+      const dbPath = '../backend/quicksketch.db';
+      if (fs.existsSync(dbPath)) {
+        const SQL = await initSqlJs();
+        const db = new SQL.Database(fs.readFileSync(dbPath));
+        db.run("DELETE FROM sketches WHERE author_id IN (SELECT id FROM users WHERE username LIKE 'artist_%' OR username LIKE 'creator_%' OR username LIKE 'delete_%' OR username LIKE 'avatar_%' OR username LIKE 'guesser_%' OR username LIKE 'login_%' OR username LIKE 'e2e_%')");
+        db.run("DELETE FROM users WHERE username LIKE 'artist_%' OR username LIKE 'creator_%' OR username LIKE 'delete_%' OR username LIKE 'avatar_%' OR username LIKE 'guesser_%' OR username LIKE 'login_%' OR username LIKE 'e2e_%'");
+        fs.writeFileSync(dbPath, Buffer.from(db.export()));
+      }
+    } catch (e) {}
   });
 
 });

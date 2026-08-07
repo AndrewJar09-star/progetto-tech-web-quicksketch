@@ -1,14 +1,14 @@
 import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext.jsx';
+import { useAuth } from '../context/AuthContext';
 
 export default function Navbar() {
   const { user, loggedIn, logout } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
-  const [menuOpen, setMenuOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState<boolean>(false);
 
-  const isActive = (path) => {
+  const isActive = (path: string): boolean => {
     const hash = location.pathname;
     return hash === path || (path === '/home' && hash === '/');
   };

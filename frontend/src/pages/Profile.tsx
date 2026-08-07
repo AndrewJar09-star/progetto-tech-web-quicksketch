@@ -1,14 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, ChangeEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getUserStats, updateAvatar } from '../api.js';
-import { useAuth } from '../context/AuthContext.jsx';
-import { useToast } from '../components/Toast.jsx';
+import { getUserStats, updateAvatar } from '../api';
+import { useAuth } from '../context/AuthContext';
+import { useToast } from '../components/Toast';
+import { UserStats, ApiError } from '../types';
 
 const EMOJI_AVATARS = [
   '🎨', '🤖', '🦊', '🐱‍🚀', '🚀', '🎭', '👑', '🦄', '🐲', '👾', '🎮', '⚡', '🧙‍♂️', '🦸‍♀️', '🐱', '🐼', '🦁', '🍕'
 ];
 
-function emojiToSvgDataUrl(emoji) {
+function emojiToSvgDataUrl(emoji: string): string {
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="50" fill="%23FFE156"/><text x="50" y="65" font-size="50" text-anchor="middle">${emoji}</text></svg>`;
   return `data:image/svg+xml;utf8,${svg}`;
 }
@@ -18,13 +19,13 @@ export default function Profile() {
   const navigate = useNavigate();
   const { showToast } = useToast();
 
-  const [stats, setStats] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [stats, setStats] = useState<UserStats | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const [showAvatarModal, setShowAvatarModal] = useState(false);
-  const [customUrl, setCustomUrl] = useState('');
-  const [savingAvatar, setSavingAvatar] = useState(false);
+  const [showAvatarModal, setShowAvatarModal] = useState<boolean>(false);
+  const [customUrl, setCustomUrl] = useState<string>('');
+  const [savingAvatar, setSavingAvatar] = useState<boolean>(false);
 
   useEffect(() => {
     if (!loggedIn) {
@@ -38,33 +39,35 @@ export default function Profile() {
     }
   }, [loggedIn, user, navigate, showToast]);
 
-  async function loadStats(userId) {
+  async function loadStats(userId: number) {
     setLoading(true);
     try {
       const { stats: s } = await getUserStats(userId);
       setStats(s);
-    } catch (err) {
-      setError(err.error || 'Impossibile caricare le statistiche.');
+    } catch (err: any) {
+      const apiErr = err as ApiError;
+      setError(apiErr.error || 'Impossibile caricare le statistiche.');
     } finally {
       setLoading(false);
     }
   }
 
-  async function handleSaveAvatar(url) {
+  async function handleSaveAvatar(url: string | null) {
     setSavingAvatar(true);
     try {
       await updateAvatar(url);
       refreshAuth();
       showToast('Avatar aggiornato con successo! 🎉', 'success');
       setShowAvatarModal(false);
-    } catch (err) {
-      showToast(err.error || 'Errore nell\'aggiornamento dell\'avatar', 'error');
+    } catch (err: any) {
+      const apiErr = err as ApiError;
+      showToast(apiErr.error || 'Errore nell\'aggiornamento dell\'avatar', 'error');
     } finally {
       setSavingAvatar(false);
     }
   }
 
-  function handleFileUpload(e) {
+  function handleFileUpload(e: ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -75,7 +78,7 @@ export default function Profile() {
 
     const reader = new FileReader();
     reader.onload = async (evt) => {
-      const base64 = evt.target?.result;
+      const base64 = evt.target?.result as string;
       if (base64) {
         await handleSaveAvatar(base64);
       }
@@ -113,12 +116,10 @@ export default function Profile() {
           🖼️ Personalizza Avatar
         </button>
 
-        {/* Modal / Section Personalizzazione Avatar */}
         {showAvatarModal && (
           <div className="card" style={{ marginTop: '1.5rem', textAlign: 'left', background: 'var(--bg-paper-alt)', border: '2px dashed var(--ink)' }}>
             <h4 style={{ fontFamily: 'var(--font-heading)', marginBottom: '1rem' }}>Scegli il tuo Avatar:</h4>
 
-            {/* Presets Emoji */}
             <div style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '0.5rem', color: 'var(--ink-muted)' }}>
               Scegli un Avatar rapido:
             </div>
@@ -136,7 +137,6 @@ export default function Profile() {
               ))}
             </div>
 
-            {/* Carica File */}
             <div style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '0.5rem', color: 'var(--ink-muted)' }}>
               Oppure carica una tua foto dal dispositivo:
             </div>
@@ -149,7 +149,6 @@ export default function Profile() {
               onChange={handleFileUpload}
             />
 
-            {/* Inserisci URL */}
             <div style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '0.5rem', color: 'var(--ink-muted)' }}>
               Oppure incolla l'URL di un'immagine:
             </div>
@@ -203,10 +202,9 @@ export default function Profile() {
   );
 }
 
-function StatsDisplay({ stats }) {
+function StatsDisplay({ stats }: { stats: UserStats }) {
   return (
     <>
-      {/* Statistiche come Artista */}
       <h3 className="section-title">🎨 Come Artista</h3>
       <div className="stats-grid">
         <div className="card stat-card">
@@ -231,7 +229,6 @@ function StatsDisplay({ stats }) {
         </div>
       </div>
 
-      {/* Statistiche come Giocatore */}
       <h3 className="section-title" style={{ marginTop: '2.5rem' }}>🎯 Come Giocatore</h3>
       <div className="stats-grid">
         <div className="card stat-card">
@@ -256,7 +253,6 @@ function StatsDisplay({ stats }) {
         </div>
       </div>
 
-      {/* Media tentativi */}
       <div className="card big-stat-display">
         <div style={{ fontSize: '0.9rem', color: 'var(--ink-muted)', marginBottom: '0.5rem', fontWeight: 800 }}>
           Media tentativi per indovinare

@@ -1,44 +1,47 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import { getSketches, deleteSketch } from '../api.js';
-import { useAuth } from '../context/AuthContext.jsx';
-import { useToast } from '../components/Toast.jsx';
+import { Link, useNavigate } from 'react-router-dom';
+import { getSketches, deleteSketch } from '../api';
+import { useAuth } from '../context/AuthContext';
+import { useToast } from '../components/Toast';
+import { Sketch, Pagination, ApiError } from '../types';
 
 export default function Home() {
   const { loggedIn } = useAuth();
   const { showToast } = useToast();
-  const [sketches, setSketches] = useState([]);
-  const [pagination, setPagination] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [page, setPage] = useState(1);
+  const [sketches, setSketches] = useState<Sketch[]>([]);
+  const [pagination, setPagination] = useState<Pagination | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+  const [page, setPage] = useState<number>(1);
 
   useEffect(() => {
     loadSketches(page);
   }, [page]);
 
-  async function loadSketches(p) {
+  async function loadSketches(p: number) {
     setLoading(true);
     setError(null);
     try {
       const data = await getSketches(p, 12);
       setSketches(data.sketches);
       setPagination(data.pagination);
-    } catch (err) {
-      setError(err.error || 'Impossibile caricare gli sketch.');
+    } catch (err: any) {
+      const apiErr = err as ApiError;
+      setError(apiErr.error || 'Impossibile caricare gli sketch.');
     } finally {
       setLoading(false);
     }
   }
 
-  async function handleDelete(sketchId) {
+  async function handleDelete(sketchId: number) {
     if (!window.confirm('Sei sicuro di voler eliminare questo sketch?')) return;
     try {
       await deleteSketch(sketchId);
       showToast('Sketch eliminato con successo! 🗑️', 'success');
       setSketches(prev => prev.filter(s => s.id !== sketchId));
-    } catch (err) {
-      showToast(err.error || 'Errore nell\'eliminazione dello sketch', 'error');
+    } catch (err: any) {
+      const apiErr = err as ApiError;
+      showToast(apiErr.error || 'Errore nell\'eliminazione dello sketch', 'error');
     }
   }
 
@@ -107,19 +110,25 @@ export default function Home() {
   );
 }
 
-function SketchCard({ sketch, onDelete }) {
+interface SketchCardProps {
+  sketch: Sketch;
+  onDelete: (id: number) => void;
+}
+
+function SketchCard({ sketch, onDelete }: SketchCardProps) {
+  const navigate = useNavigate();
   const date = new Date(sketch.created_at).toLocaleDateString('it-IT', {
     day: 'numeric', month: 'short'
   });
 
-  let badge = null;
+  let badge: React.ReactNode = null;
   if (sketch.is_own) {
     badge = <span className="sketch-badge badge-own">✏️ Tuo</span>;
   } else if (sketch.user_has_guessed) {
     badge = <span className="sketch-badge badge-guessed">✅ Indovinato</span>;
   } else if (sketch.user_exhausted) {
     badge = <span className="sketch-badge badge-failed">❌ Fallito</span>;
-  } else if (sketch.user_attempts > 0) {
+  } else if ((sketch.user_attempts || 0) > 0) {
     badge = <span className="sketch-badge badge-play">🎯 {sketch.user_attempts}/10</span>;
   }
 
@@ -130,7 +139,7 @@ function SketchCard({ sketch, onDelete }) {
       tabIndex={0}
       role="button"
       aria-label={`Sketch di ${sketch.author_username}`}
-      onClick={() => { location.hash = `#/sketch/${sketch.id}`; }}
+      onClick={() => { navigate(`/sketch/${sketch.id}`); }}
     >
       <img
         className="sketch-image"
@@ -165,8 +174,8 @@ function SketchCard({ sketch, onDelete }) {
   );
 }
 
-function renderPageButtons(pag, currentPage, setPage) {
-  const buttons = [];
+function renderPageButtons(pag: Pagination, currentPage: number, setPage: (p: number) => void) {
+  const buttons: React.ReactNode[] = [];
   for (let i = 1; i <= pag.totalPages; i++) {
     if (pag.totalPages > 7) {
       if (i === 1 || i === pag.totalPages || (i >= currentPage - 1 && i <= currentPage + 1)) {

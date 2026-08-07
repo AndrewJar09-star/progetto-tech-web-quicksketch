@@ -1,6 +1,6 @@
 import * as Sketch from '../models/Sketch.js';
 import * as Guess from '../models/Guess.js';
-import { queryOne } from '../config/database.js';
+import { queryOne, runQuery } from '../config/database.js';
 
 /**
  * Controller per le operazioni sugli sketch.
@@ -247,5 +247,21 @@ export function remove(req, res) {
   } catch (err) {
     console.error('Errore eliminazione sketch:', err);
     res.status(500).json({ error: 'Errore interno del server' });
+  }
+}
+
+/**
+ * POST /api/sketches/cleanup-test-data
+ */
+export function cleanupTestData(req, res) {
+  try {
+    runQuery(`DELETE FROM sketches WHERE author_id IN (
+      SELECT id FROM users WHERE username LIKE 'artist_%' OR username LIKE 'creator_%' OR username LIKE 'delete_%' OR username LIKE 'avatar_%' OR username LIKE 'guesser_%' OR username LIKE 'login_%' OR username LIKE 'e2e_%'
+    )`);
+    runQuery(`DELETE FROM users WHERE username LIKE 'artist_%' OR username LIKE 'creator_%' OR username LIKE 'delete_%' OR username LIKE 'avatar_%' OR username LIKE 'guesser_%' OR username LIKE 'login_%' OR username LIKE 'e2e_%'`);
+    res.json({ message: 'Pulizia dati di test completata' });
+  } catch (err) {
+    console.error('Errore pulizia dati test:', err);
+    res.status(500).json({ error: 'Errore interno' });
   }
 }

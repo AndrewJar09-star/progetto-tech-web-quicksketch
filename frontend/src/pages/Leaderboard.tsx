@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { getArtistLeaderboard, getGuesserLeaderboard } from '../api.js';
+import { getArtistLeaderboard, getGuesserLeaderboard } from '../api';
+import { ArtistLeaderboardItem, GuesserLeaderboardItem, ApiError } from '../types';
 
 export default function Leaderboard() {
-  const [tab, setTab] = useState('artists'); // 'artists' | 'guessers'
-  const [artists, setArtists] = useState([]);
-  const [guessers, setGuessers] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [tab, setTab] = useState<'artists' | 'guessers'>('artists');
+  const [artists, setArtists] = useState<ArtistLeaderboardItem[]>([]);
+  const [guessers, setGuessers] = useState<GuesserLeaderboardItem[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     loadAllLeaderboards();
@@ -22,8 +23,9 @@ export default function Leaderboard() {
       ]);
       setArtists(resArtists.leaderboard || []);
       setGuessers(resGuessers.leaderboard || []);
-    } catch (err) {
-      setError(err.error || 'Impossibile caricare le classifiche.');
+    } catch (err: any) {
+      const apiErr = err as ApiError;
+      setError(apiErr.error || 'Impossibile caricare le classifiche.');
     } finally {
       setLoading(false);
     }
@@ -82,7 +84,7 @@ export default function Leaderboard() {
                   </tr>
                 </thead>
                 <tbody>
-                  {artists.map((artist, i) => (
+                  {artists.map((artist: any, i: number) => (
                     <tr key={artist.id}>
                       <td>
                         <span className={`rank-badge ${i < 3 ? `rank-${i + 1}` : 'rank-other'}`}>
@@ -91,9 +93,11 @@ export default function Leaderboard() {
                       </td>
                       <td style={{ fontWeight: 800 }}>{artist.username}</td>
                       <td>{artist.total_sketches}</td>
-                      <td>{artist.total_correct_guesses}</td>
+                      <td>{artist.total_correct_guesses ?? artist.total_guesses_received ?? 0}</td>
                       <td>
-                        <span style={{ color: 'var(--ink)', fontWeight: 800 }}>{artist.guess_rate}%</span>
+                        <span style={{ color: 'var(--ink)', fontWeight: 800 }}>
+                          {artist.guess_rate ?? artist.success_rate ?? 0}%
+                        </span>
                       </td>
                     </tr>
                   ))}
@@ -121,7 +125,7 @@ export default function Leaderboard() {
                   </tr>
                 </thead>
                 <tbody>
-                  {guessers.map((guesser, i) => (
+                  {guessers.map((guesser: any, i: number) => (
                     <tr key={guesser.id}>
                       <td>
                         <span className={`rank-badge ${i < 3 ? `rank-${i + 1}` : 'rank-other'}`}>
@@ -130,7 +134,7 @@ export default function Leaderboard() {
                       </td>
                       <td style={{ fontWeight: 800 }}>{guesser.username}</td>
                       <td style={{ color: 'var(--ink)', fontWeight: 800 }}>{guesser.words_guessed}</td>
-                      <td>{guesser.sketches_attempted}</td>
+                      <td>{guesser.sketches_attempted || guesser.total_attempts}</td>
                       <td>{guesser.avg_attempts}</td>
                     </tr>
                   ))}

@@ -1,9 +1,16 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, ChangeEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import SignaturePad from 'signature_pad';
-import { getRandomWords, createSketch } from '../api.js';
-import { useAuth } from '../context/AuthContext.jsx';
-import { useToast } from '../components/Toast.jsx';
+import { getRandomWords, createSketch } from '../api';
+import { useAuth } from '../context/AuthContext';
+import { useToast } from '../components/Toast';
+import { ApiError } from '../types';
+
+declare global {
+  interface Window {
+    __qs_submit?: () => void;
+  }
+}
 
 const PRESET_COLORS = [
   { name: 'Nero', hex: '#000000' },
@@ -30,24 +37,24 @@ export default function Create() {
   const navigate = useNavigate();
   const { showToast } = useToast();
 
-  const [phase, setPhase] = useState('word-select');
-  const [selectedWord, setSelectedWord] = useState(null);
-  const selectedWordRef = useRef(null);
+  const [phase, setPhase] = useState<'word-select' | 'drawing'>('word-select');
+  const [selectedWord, setSelectedWord] = useState<string | null>(null);
+  const selectedWordRef = useRef<string | null>(null);
 
-  const [words, setWords] = useState([]);
-  const [wordsLoading, setWordsLoading] = useState(true);
-  const [timeLeft, setTimeLeft] = useState(TIME_LIMIT);
+  const [words, setWords] = useState<string[]>([]);
+  const [wordsLoading, setWordsLoading] = useState<boolean>(true);
+  const [timeLeft, setTimeLeft] = useState<number>(TIME_LIMIT);
 
   // Drawing Tools State
-  const [activeColor, setActiveColor] = useState('#000000');
-  const [customColor, setCustomColor] = useState('#ff0055');
-  const [isEraser, setIsEraser] = useState(false);
-  const [activeSize, setActiveSize] = useState(1);
+  const [activeColor, setActiveColor] = useState<string>('#000000');
+  const [customColor, setCustomColor] = useState<string>('#ff0055');
+  const [isEraser, setIsEraser] = useState<boolean>(false);
+  const [activeSize, setActiveSize] = useState<number>(1);
 
-  const canvasRef = useRef(null);
-  const padRef = useRef(null);
-  const timerRef = useRef(null);
-  const submittedRef = useRef(false);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const padRef = useRef<SignaturePad | null>(null);
+  const timerRef = useRef<any>(null);
+  const submittedRef = useRef<boolean>(false);
 
   useEffect(() => {
     if (!loggedIn) {
@@ -60,7 +67,6 @@ export default function Create() {
     loadWords();
   }, []);
 
-  // Cleanup timer on unmount
   useEffect(() => {
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
@@ -81,7 +87,7 @@ export default function Create() {
     }
   }
 
-  const handleSelectWord = (word) => {
+  const handleSelectWord = (word: string) => {
     setSelectedWord(word);
     selectedWordRef.current = word;
   };
@@ -91,7 +97,6 @@ export default function Create() {
     setPhase('drawing');
     submittedRef.current = false;
 
-    // Init canvas after state update
     setTimeout(() => {
       const canvas = canvasRef.current;
       if (!canvas) return;
@@ -107,8 +112,10 @@ export default function Create() {
       canvas.style.height = h + 'px';
 
       const ctx = canvas.getContext('2d');
-      ctx.setTransform(1, 0, 0, 1, 0, 0);
-      ctx.scale(displayRatio, displayRatio);
+      if (ctx) {
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.scale(displayRatio, displayRatio);
+      }
 
       if (padRef.current) {
         padRef.current.off();
@@ -118,14 +125,13 @@ export default function Create() {
 
       padRef.current = new SignaturePad(canvas, {
         penColor: initialColor,
-        minWidth: SIZES[activeSize]?.value * 0.5 || 2,
+        minWidth: (SIZES[activeSize]?.value || 4) * 0.5,
         maxWidth: SIZES[activeSize]?.value || 4,
         backgroundColor: '#ffffff'
       });
 
       padRef.current.clear();
 
-      // Start timer
       setTimeLeft(TIME_LIMIT);
       timerRef.current = setInterval(() => {
         setTimeLeft(prev => {
@@ -167,32 +173,33 @@ export default function Create() {
       const canvas = canvasRef.current;
       if (!canvas) return;
 
-      // Export canvas at standard 700x500 resolution
       const exportCanvas = document.createElement('canvas');
       exportCanvas.width = 700;
       exportCanvas.height = 500;
       const exportCtx = exportCanvas.getContext('2d');
-      exportCtx.fillStyle = '#ffffff';
-      exportCtx.fillRect(0, 0, 700, 500);
-      exportCtx.drawImage(canvas, 0, 0, 700, 500);
+      if (exportCtx) {
+        exportCtx.fillStyle = '#ffffff';
+        exportCtx.fillRect(0, 0, 700, 500);
+        exportCtx.drawImage(canvas, 0, 0, 700, 500);
+      }
 
       const imageData = exportCanvas.toDataURL('image/png');
       await createSketch(wordToPublish, imageData, TIME_LIMIT);
       showToast('Sketch pubblicato con successo! 🎉', 'success');
       navigate('/home');
-    } catch (err) {
-      showToast(err.error || 'Errore nella pubblicazione', 'error');
+    } catch (err: any) {
+      const apiErr = err as ApiError;
+      showToast(apiErr.error || 'Errore nella pubblicazione', 'error');
       submittedRef.current = false;
     }
   }, [selectedWord, showToast, navigate]);
 
-  // Make submitSketch available in timer callback
   useEffect(() => {
     window.__qs_submit = submitSketch;
     return () => { delete window.__qs_submit; };
   }, [submitSketch]);
 
-  const handleColorClick = (hex) => {
+  const handleColorClick = (hex: string) => {
     setIsEraser(false);
     setActiveColor(hex);
     if (padRef.current) {
@@ -200,7 +207,7 @@ export default function Create() {
     }
   };
 
-  const handleCustomColorChange = (e) => {
+  const handleCustomColorChange = (e: ChangeEvent<HTMLInputElement>) => {
     const hex = e.target.value;
     setCustomColor(hex);
     setIsEraser(false);
@@ -217,7 +224,7 @@ export default function Create() {
     }
   };
 
-  const handleSizeClick = (idx) => {
+  const handleSizeClick = (idx: number) => {
     setActiveSize(idx);
     if (padRef.current) {
       padRef.current.minWidth = SIZES[idx].value * 0.5;

@@ -72,10 +72,47 @@ app.use((err, req, res, next) => {
 (async () => {
   try {
     await initDatabase();
-    app.listen(PORT, () => {
+    const server = app.listen(PORT, () => {
       console.log(`\n🎨 QUICKSKETCH Backend avviato su http://localhost:${PORT}`);
       console.log(`📝 API disponibile su http://localhost:${PORT}/api`);
       console.log(`💚 Health check: http://localhost:${PORT}/api/health\n`);
+    });
+
+    let isShuttingDown = false;
+    const shutdown = (signal) => {
+      if (isShuttingDown) return;
+      isShuttingDown = true;
+
+      console.log(`\n🛑 Ricevuto ${signal}. Chiusura server e rilascio porta ${PORT}...`);
+
+      try {
+        saveDatabase();
+      } catch (err) {
+        console.error('Errore durante il salvataggio del database:', err);
+      }
+
+      if (server && typeof server.closeAllConnections === 'function') {
+        server.closeAllConnections();
+      }
+
+      server.close(() => {
+        console.log('✅ Backend terminato e porta 3000 rilasciata.');
+        process.exit(0);
+      });
+
+      // Timeout di sicurezza per forzare l'uscita entro 1 secondo
+      setTimeout(() => {
+        console.log('⚠️ Chiusura forzata del processo server.');
+        process.exit(0);
+      }, 1000).unref();
+    };
+
+    process.on('SIGINT', () => shutdown('SIGINT'));
+    process.on('SIGTERM', () => shutdown('SIGTERM'));
+    process.on('SIGHUP', () => shutdown('SIGHUP'));
+    process.on('uncaughtException', (err) => {
+      console.error('❌ Uncaught Exception:', err);
+      shutdown('uncaughtException');
     });
   } catch (err) {
     console.error('❌ Errore avvio server:', err);

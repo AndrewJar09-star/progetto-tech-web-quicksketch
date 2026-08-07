@@ -1,12 +1,12 @@
 import React from 'react';
-import { Routes, Route } from 'react-router-dom';
-import Navbar from './components/Navbar.jsx';
-import Home from './pages/Home.jsx';
-import Auth from './pages/Auth.jsx';
-import Create from './pages/Create.jsx';
-import Play from './pages/Play.jsx';
-import Leaderboard from './pages/Leaderboard.jsx';
-import Profile from './pages/Profile.jsx';
+import { Routes, Route, Link } from 'react-router-dom';
+import Navbar from './components/Navbar';
+import Home from './pages/Home';
+import Auth from './pages/Auth';
+import Create from './pages/Create';
+import Play from './pages/Play';
+import Leaderboard from './pages/Leaderboard';
+import Profile from './pages/Profile';
 
 export default function App() {
   return (
@@ -26,7 +26,7 @@ export default function App() {
               <div className="empty-state-icon">🔍</div>
               <h3>Pagina non trovata</h3>
               <p>La pagina che cerchi non esiste.</p>
-              <a href="#/home" className="btn btn-primary">Torna alla Home</a>
+              <Link to="/home" className="btn btn-primary">Torna alla Home</Link>
             </div>
           } />
         </Routes>

@@ -1,10 +1,11 @@
 import React from 'react';
 
-/**
- * Visualizzazione dei 10 tentativi come cuoricini disegnati a matita.
- * I cuoricini usati vengono sbarrati progressivamente.
- */
-export default function HeartLives({ used = 0, total = 10 }) {
+interface HeartLivesProps {
+  used?: number;
+  total?: number;
+}
+
+export default function HeartLives({ used = 0, total = 10 }: HeartLivesProps) {
   return (
     <div className="heart-lives">
       {Array.from({ length: total }, (_, i) => {

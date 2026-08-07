@@ -1,11 +1,19 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { getCurrentUser, isLoggedIn, clearTokens } from '../api.js';
+import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
+import { getCurrentUser, isLoggedIn, clearTokens } from '../api';
+import { User } from '../types';
 
-const AuthContext = createContext(null);
+interface AuthContextType {
+  user: User | null;
+  loggedIn: boolean;
+  refreshAuth: () => void;
+  logout: () => void;
+}
 
-export function AuthProvider({ children }) {
-  const [user, setUser] = useState(() => getCurrentUser());
-  const [loggedIn, setLoggedIn] = useState(() => isLoggedIn());
+const AuthContext = createContext<AuthContextType | null>(null);
+
+export function AuthProvider({ children }: { children: ReactNode }) {
+  const [user, setUser] = useState<User | null>(() => getCurrentUser());
+  const [loggedIn, setLoggedIn] = useState<boolean>(() => isLoggedIn());
 
   const refreshAuth = useCallback(() => {
     setUser(getCurrentUser());
@@ -18,7 +26,6 @@ export function AuthProvider({ children }) {
     setLoggedIn(false);
   }, []);
 
-  // Listen for storage changes (e.g. login in another tab)
   useEffect(() => {
     const handler = () => refreshAuth();
     window.addEventListener('storage', handler);
@@ -32,7 +39,7 @@ export function AuthProvider({ children }) {
   );
 }
 
-export function useAuth() {
+export function useAuth(): AuthContextType {
   const ctx = useContext(AuthContext);
   if (!ctx) throw new Error('useAuth must be used within AuthProvider');
   return ctx;

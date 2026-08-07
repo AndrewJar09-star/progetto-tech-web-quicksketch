@@ -1,29 +1,32 @@
-import React, { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
-import { getSketch, submitGuess, getGuessHistory } from '../api.js';
-import { useAuth } from '../context/AuthContext.jsx';
-import { useToast } from '../components/Toast.jsx';
-import HeartLives from '../components/HeartLives.jsx';
+import React, { useState, useEffect, FormEvent } from 'react';
+import { useParams, Link } from 'react-router-dom';
+import { getSketch, submitGuess, getGuessHistory } from '../api';
+import { useAuth } from '../context/AuthContext';
+import { useToast } from '../components/Toast';
+import HeartLives from '../components/HeartLives';
+import { Sketch, Guess, ApiError } from '../types';
 
 export default function Play() {
-  const { id } = useParams();
+  const { id } = useParams<{ id: string }>();
   const { loggedIn } = useAuth();
   const { showToast } = useToast();
-  const [sketch, setSketch] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [sketch, setSketch] = useState<Sketch | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    loadSketch();
+    if (id) loadSketch();
   }, [id]);
 
   async function loadSketch() {
+    if (!id) return;
     setLoading(true);
     try {
       const { sketch: s } = await getSketch(id);
       setSketch(s);
-    } catch (err) {
-      setError(err.error || 'Sketch non trovato');
+    } catch (err: any) {
+      const apiErr = err as ApiError;
+      setError(apiErr.error || 'Sketch non trovato');
     } finally {
       setLoading(false);
     }
@@ -38,13 +41,13 @@ export default function Play() {
     );
   }
 
-  if (error) {
+  if (error || !sketch) {
     return (
       <div className="empty-state">
         <div className="empty-state-icon">😕</div>
         <h3>Sketch non trovato</h3>
         <p>Lo sketch potrebbe essere stato rimosso.</p>
-        <a href="#/home" className="btn btn-primary">Torna alla Home</a>
+        <Link to="/home" className="btn btn-primary">Torna alla Home</Link>
       </div>
     );
   }
@@ -61,7 +64,7 @@ export default function Play() {
           <div className="card text-center">
             <h3>Vuoi provare a indovinare?</h3>
             <p className="text-muted mt-1">Accedi per iniziare a giocare!</p>
-            <a href="#/auth" className="btn btn-primary mt-2">Accedi</a>
+            <Link to="/auth" className="btn btn-primary mt-2">Accedi</Link>
           </div>
         )}
       </div>
@@ -69,7 +72,7 @@ export default function Play() {
   );
 }
 
-function SketchPanel({ sketch }) {
+function SketchPanel({ sketch }: { sketch: Sketch }) {
   const date = new Date(sketch.created_at).toLocaleDateString('it-IT', {
     day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit'
   });
@@ -99,14 +102,20 @@ function SketchPanel({ sketch }) {
   );
 }
 
-function GuessPanel({ sketch, onUpdate, showToast }) {
-  const [history, setHistory] = useState([]);
-  const [guess, setGuess] = useState('');
-  const [message, setMessage] = useState(null);
-  const [loading, setLoading] = useState(false);
+interface GuessPanelProps {
+  sketch: Sketch;
+  onUpdate: () => Promise<void>;
+  showToast: (message: string, type?: 'success' | 'error' | 'info') => void;
+}
+
+function GuessPanel({ sketch, onUpdate, showToast }: GuessPanelProps) {
+  const [history, setHistory] = useState<Guess[]>([]);
+  const [guess, setGuess] = useState<string>('');
+  const [message, setMessage] = useState<{ text: string; remaining: number } | null>(null);
+  const [loading, setLoading] = useState<boolean>(false);
 
   useEffect(() => {
-    if (sketch.user_attempts > 0 || sketch.user_has_guessed || sketch.user_exhausted) {
+    if ((sketch.user_attempts || 0) > 0 || sketch.user_has_guessed || sketch.user_exhausted) {
       loadHistory();
     }
   }, [sketch]);
@@ -171,7 +180,7 @@ function GuessPanel({ sketch, onUpdate, showToast }) {
   // Pannello attivo
   const attemptsUsed = sketch.user_attempts || 0;
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     const g = guess.trim();
     if (!g) return;
@@ -196,8 +205,9 @@ function GuessPanel({ sketch, onUpdate, showToast }) {
         setGuess('');
         setLoading(false);
       }
-    } catch (err) {
-      showToast(err.error || 'Errore nell\'invio del tentativo', 'error');
+    } catch (err: any) {
+      const apiErr = err as ApiError;
+      showToast(apiErr.error || 'Errore nell\'invio del tentativo', 'error');
       setLoading(false);
     }
   };
@@ -252,7 +262,7 @@ function GuessPanel({ sketch, onUpdate, showToast }) {
   );
 }
 
-function GuessHistory({ guesses }) {
+function GuessHistory({ guesses }: { guesses: Guess[] }) {
   if (!guesses || guesses.length === 0) return null;
 
   return (

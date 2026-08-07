@@ -1,14 +1,15 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { login as apiLogin, register as apiRegister } from '../api.js';
-import { useAuth } from '../context/AuthContext.jsx';
-import { useToast } from '../components/Toast.jsx';
+import React, { useState, useEffect, FormEvent } from 'react';
+import { useNavigate, NavigateFunction } from 'react-router-dom';
+import { login as apiLogin, register as apiRegister } from '../api';
+import { useAuth } from '../context/AuthContext';
+import { useToast } from '../components/Toast';
+import { ApiError } from '../types';
 
 export default function Auth() {
   const { loggedIn, refreshAuth } = useAuth();
   const navigate = useNavigate();
   const { showToast } = useToast();
-  const [tab, setTab] = useState('login');
+  const [tab, setTab] = useState<'login' | 'register'>('login');
 
   useEffect(() => {
     if (loggedIn) navigate('/home');
@@ -49,13 +50,19 @@ export default function Auth() {
   );
 }
 
-function LoginForm({ refreshAuth, showToast, navigate }) {
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
+interface FormProps {
+  refreshAuth: () => void;
+  showToast: (message: string, type?: 'success' | 'error' | 'info') => void;
+  navigate: NavigateFunction;
+}
 
-  const handleSubmit = async (e) => {
+function LoginForm({ refreshAuth, showToast, navigate }: FormProps) {
+  const [username, setUsername] = useState<string>('');
+  const [password, setPassword] = useState<string>('');
+  const [error, setError] = useState<string>('');
+  const [loading, setLoading] = useState<boolean>(false);
+
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError('');
     setLoading(true);
@@ -65,8 +72,9 @@ function LoginForm({ refreshAuth, showToast, navigate }) {
       refreshAuth();
       showToast('Login effettuato con successo!', 'success');
       navigate('/home');
-    } catch (err) {
-      setError(err.error || 'Errore durante il login');
+    } catch (err: any) {
+      const apiErr = err as ApiError;
+      setError(apiErr.error || 'Errore durante il login');
       setLoading(false);
     }
   };
@@ -112,15 +120,15 @@ function LoginForm({ refreshAuth, showToast, navigate }) {
   );
 }
 
-function RegisterForm({ refreshAuth, showToast, navigate }) {
-  const [username, setUsername] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [passwordConfirm, setPasswordConfirm] = useState('');
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
+function RegisterForm({ refreshAuth, showToast, navigate }: FormProps) {
+  const [username, setUsername] = useState<string>('');
+  const [email, setEmail] = useState<string>('');
+  const [password, setPassword] = useState<string>('');
+  const [passwordConfirm, setPasswordConfirm] = useState<string>('');
+  const [error, setError] = useState<string>('');
+  const [loading, setLoading] = useState<boolean>(false);
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError('');
 
@@ -136,8 +144,9 @@ function RegisterForm({ refreshAuth, showToast, navigate }) {
       refreshAuth();
       showToast('Registrazione completata! Benvenuto! 🎉', 'success');
       navigate('/home');
-    } catch (err) {
-      setError(err.error || 'Errore durante la registrazione');
+    } catch (err: any) {
+      const apiErr = err as ApiError;
+      setError(apiErr.error || 'Errore durante la registrazione');
       setLoading(false);
     }
   };
